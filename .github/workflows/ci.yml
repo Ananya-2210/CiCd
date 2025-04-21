@@ -21,7 +21,7 @@ jobs:
       run: npm install
 
     - name: Run tests (if you have tests)
-      run: echo "No tests yet"  # Replace with `npm test` if you have tests
+      run: echo "No tests yet"  # Replace with `npm test` if tests exist
 
     - name: Log in to DockerHub
       uses: docker/login-action@v2
@@ -30,22 +30,28 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Build Docker image
-      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/cicd-app .
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/cicd-app:v1.0.1 .
 
     - name: Push Docker image
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/cicd-app
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/cicd-app:v1.0.1
 
-    # Deploy container: Stop & Remove old container, then run the new one
     - name: Deploy Docker container
       run: |
-        # Pull the latest image
-        docker pull ${{ secrets.DOCKER_USERNAME }}/cicd-app
+        echo "Pulling latest Docker image..."
+        docker pull ${{ secrets.DOCKER_USERNAME }}/cicd-app:v1.0.1
 
-        # Stop and remove any running container based on the image (if exists)
-        CONTAINER_ID=$(docker ps -q -f "ancestor=${{ secrets.DOCKER_USERNAME }}/cicd-app")
+        echo "Listing current running containers:"
+        docker ps
+
+        echo "Checking for old container using the same image..."
+        CONTAINER_ID=$(docker ps -q -f "ancestor=${{ secrets.DOCKER_USERNAME }}/cicd-app:v1.0.1")
+
         if [ ! -z "$CONTAINER_ID" ]; then
+          echo "Stopping and removing container ID: $CONTAINER_ID"
           docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
+        else
+          echo "No running container found from the same image."
         fi
 
-        # Run the new container
-        docker run -d --name cicd-app -p 3000:3000 ${{ secrets.DOCKER_USERNAME }}/cicd-app
+        echo "Running new container from updated image..."
+        docker run -d --name cicd-app -p 3000:3000 ${{ secrets.DOCKER_USERNAME }}/cicd-app:v1.0.1
