@@ -37,7 +37,15 @@ jobs:
 
     # Deploy container: Stop & Remove old container, then run the new one
     - name: Deploy Docker container
-      run: |
-        docker pull ${{ secrets.DOCKER_USERNAME }}/cicd-app
-        docker ps -q -f "ancestor=${{ secrets.DOCKER_USERNAME }}/cicd-app" | xargs -I {} docker stop {} && docker rm {}
-        docker run -d --name cicd-app -p 3000:3000 ${{ secrets.DOCKER_USERNAME }}/cicd-app
+  run: |
+    # Pull the latest image
+    docker pull ${{ secrets.DOCKER_USERNAME }}/cicd-app
+
+    # Stop and remove any running container based on the image (if exists)
+    CONTAINER_ID=$(docker ps -q -f "ancestor=${{ secrets.DOCKER_USERNAME }}/cicd-app")
+    if [ ! -z "$CONTAINER_ID" ]; then
+      docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
+    fi
+
+    # Run the new container
+    docker run -d --name cicd-app -p 3000:3000 ${{ secrets.DOCKER_USERNAME }}/cicd-app
