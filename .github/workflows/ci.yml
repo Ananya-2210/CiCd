@@ -34,3 +34,10 @@ jobs:
 
     - name: Push Docker image
       run: docker push ${{ secrets.DOCKER_USERNAME }}/cicd-app
+
+    # Deploy container: Stop & Remove old container, then run the new one
+    - name: Deploy Docker container
+      run: |
+        docker pull ${{ secrets.DOCKER_USERNAME }}/cicd-app
+        docker ps -q -f "ancestor=${{ secrets.DOCKER_USERNAME }}/cicd-app" | xargs -I {} docker stop {} && docker rm {}
+        docker run -d --name cicd-app -p 3000:3000 ${{ secrets.DOCKER_USERNAME }}/cicd-app
